@@ -1,0 +1,86 @@
+﻿@{
+    ViewBag.Title = "Home Page";
+}
+
+<div class="page-header">
+    <div class="row">
+        <h1>ASP.NET single page application built with: </h1>
+        <div class="col-md-4">
+            <p class="lead">ASP.NET, a free web framework for building great Web sites and Web applications using HTML, CSS and JavaScript.</p>
+            <p><a href="https://asp.net" class="btn btn-primary btn-lg">Learn more &raquo;</a></p>
+        </div>
+        <div class="col-md-4">
+            <p class="lead">KnockoutJS</p>
+            <p><a href="https://knockoutjs.com/" class="btn btn-primary btn-lg">Learn more &raquo;</a></p>
+        </div>
+        <div class="col-md-4">
+            <p class="lead">Entity Framework</p>
+            <p><a href="https://docs.microsoft.com/en-us/ef/ef6/" class="btn btn-primary btn-lg">Learn more &raquo;</a></p>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <h2>List of Collections</h2>
+        <p data-bind="text: isGettingCollections.isPosting()"></p>
+        <p data-bind="text: collections.length"></p>
+        <p style="display:none" data-bind="visible: isGettingCollections.isPosting()">
+            <ul data-bind="foreach: collections">
+                <li data-bind="click: () => {MyName(); $parent.MyName(); $parent.SetSelectedCollection(exampleCollectionId);}">
+                    <span data-bind="text: name()"></span>
+                </li>
+            </ul>
+        </p>
+        <p data-bind="if: !isGettingCollections.isPosting()">
+            Loading Collection List ....
+        </p>
+    </div>
+    <div class="col-md-8">
+        <h2>Selected Collection Items</h2>
+        !isGettingSelectedCollection.isPosting()
+        <p data-bind="text: isGettingSelectedCollection.isPosting()"></p>
+        <p style="display:none" data-bind="if: !isGettingSelectedCollection.isPosting()">
+            <table data-bind="with: selectedCollection">
+                <tr>
+                    <th>
+                        itemString
+                    </th>
+                    <th>
+                        itemInt
+                    </th>
+                    <th>
+                        itemBool
+                    </th>
+                </tr>
+                <tbody data-bind="foreach: exampleItems">
+                    <tr>
+                        <td>
+                            <span data-bind="text: itemString"></span>
+                        </td>
+                        <td>
+                            <span data-bind="text: itemInt"></span>
+                        </td>
+                        <td>
+                            <span data-bind="text: itemBool"></span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </p>
+        <p data-bind="if: !isGettingSelectedCollection.isPosting()">
+            Loading Selected Collection ....
+        </p>
+    </div>
+</div>
+
+@section Scripts {
+    @Scripts.Render("~/bundles/index")
+
+    <script type="text/javascript">
+        $(document).ready(function () {
+            window.indexViewModel = new IndexViewModel();
+            ko.applyBindings(window.indexViewModel);
+        });
+    </script>
+}
