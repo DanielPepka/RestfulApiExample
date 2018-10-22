@@ -6,6 +6,8 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Web.Http;
+using System.Data.Entity;
+using RestfulApiExample.Web.Extensions;
 
 namespace RestfulApiExample.Web.Controllers.api
 {
@@ -22,15 +24,22 @@ namespace RestfulApiExample.Web.Controllers.api
         {
             var response = new GetCollectionsResponse { };
 
-            var context = new RestfulApiExampleContext();
+            var repo = new RestfulApiRepo();
+            try
+            {
+                List<ExampleCollection> query = repo.GetCollections(request.IncludeItems);
+                response.Collections = query.Select(i => i.AsItemCollectionDTO(request.IncludeItems)).ToList();
+            }
+            catch (Exception ex)
+            {
+                response.Fail("GetCollections", ex);
+            }
+            finally
+            {
+                repo.Dispose();
+            }
 
-            //context.ExampleCollections.Add(new ExampleCollection{Name = "New Item 2"});
-            //context.SaveChanges();
-
-            response.Collections = context.ExampleCollections.Select(a => new CollectionDTO { Value = a }).ToList();
-
-     
-
+            response.End();
             return response;
         }
     }

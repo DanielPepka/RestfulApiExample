@@ -1,4 +1,5 @@
-﻿using System;
+﻿using RestfulApiExample.DataAccess;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -19,6 +20,29 @@ namespace RestfulApiExample.Web.Controllers.api
         public UpdateItemsResponse Post(UpdateItemsRequest request)
         {
             var response = new UpdateItemsResponse { };
+            var repo = new RestfulApiRepo();
+            try
+            {
+                foreach (var item in request.Items)
+                {
+                    repo.UpdateItem(
+                        item.ExampleItemId,
+                        item.ItemBool,
+                        item.ItemInt,
+                        item.ItemString
+                    );
+                }
+            }
+            catch (Exception ex)
+            {
+                response.Fail("UpdateItems", ex);
+            }
+            finally
+            {
+                repo.Dispose();
+            }
+
+            response.End();
             return response;
         }
     }

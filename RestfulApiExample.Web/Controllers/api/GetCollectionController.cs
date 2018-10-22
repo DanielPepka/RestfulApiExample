@@ -1,4 +1,5 @@
 ﻿using RestfulApiExample.DataAccess;
+using RestfulApiExample.Web.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Data.Entity;
@@ -21,13 +22,22 @@ namespace RestfulApiExample.Web.Controllers.api
         {
             var response = new GetCollectionResponse { };
 
-            var context = new RestfulApiExampleContext();
+            var repo = new RestfulApiRepo();
+            try
+            {
+                var query = repo.GetCollection(request.ExampleCollectionId, request.IncludeItems);
+                response.Collection = query.AsItemCollectionDTO(request.IncludeItems);
+            }
+            catch (Exception ex)
+            {
+                response.Fail("GetCollection", ex);
+            }
+            finally
+            {
+                repo.Dispose();
+            }
 
-            var query = context.ExampleCollections
-                .Where(a => a.ExampleCollectionId == request.ExampleCollectionId)
-                .Include(a => a.ExampleItems)
-                .Select(a => a);
-
+            response.End();
             return response;
         }
     }

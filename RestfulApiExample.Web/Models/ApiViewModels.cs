@@ -12,12 +12,27 @@ namespace RestfulApiExample.Web.Controllers.api
             this.Messages = new List<string>();
             this.StartTime = DateTime.Now;
             this.EndTime = DateTime.Now;
-        } 
+        }
 
-        public void End(bool success = true)
+        public void End(bool? success = null)
         {
-            this.Success = success;
+            if (success.HasValue)
+            {
+                this.Success = success.Value;
+            }
             this.EndTime = DateTime.Now;
+        }
+        public void Fail(string controllerName, Exception ex)
+        {
+            var count = 1;
+            do
+            {
+                this.Messages.Add($"{controllerName} ({count}): {ex.Message}");
+                count++;
+                ex = ex.InnerException;
+            } while (ex != null);
+
+            this.Success = false;
         }
 
         public bool Success { get; set; }
@@ -30,23 +45,44 @@ namespace RestfulApiExample.Web.Controllers.api
     {
         IsCreate,
         IsUpdate,
-        IsDelete
+        IsDelete,
+        IsUnchanged
     }
 
-    public class GenericDTO
+    public class IGenericDTO
     {
         public UpdateType UpdateType { get; set; }
     }
 
-    public class CollectionDTO : GenericDTO
+
+    public class ItemDTO : IGenericDTO
     {
-        public ExampleCollection Value { get; set; }
-    }
-    public class ItemDTO : GenericDTO
-    {
-        public ExampleItem Value { get; set; }
+        // Primary Key
+        public int ExampleItemId { get; set; }
+
+        // Example Property Types
+        public string ItemString { get; set; }
+        public int ItemInt { get; set; }
+        public bool ItemBool { get; set; }
+        public int ExampleCollectionId { get; set; }
     }
 
+    public class CollectionDTO : IGenericDTO
+    {
+        public CollectionDTO()
+        {
+            // Do this so we never run into a situation where ExampleItems is null
+            this.ItemDTOs = new HashSet<ItemDTO>();
+        }
+
+        // Primary Key
+        public int ExampleCollectionId { get; set; }
+        public string Name { get; set; }
+
+        // Collection of ItemDTO's, might be null if items are not requested
+        public virtual ICollection<ItemDTO> ItemDTOs { get; set; }
+    }
+    
     /// <summary>
     /// GetCollectionsRequest can request specific collections, if none are specified it will return all.
     /// It can also specify if it should include the items as part of the request. 
@@ -69,7 +105,7 @@ namespace RestfulApiExample.Web.Controllers.api
     {
         public GetCollectionsResponse() : base()
         {
-            this.Collections = new List<CollectionDTO>();   
+            this.Collections = new List<CollectionDTO>();
         }
 
         public List<CollectionDTO> Collections { get; set; }
@@ -81,6 +117,7 @@ namespace RestfulApiExample.Web.Controllers.api
     public class GetCollectionRequest
     {
         public int ExampleCollectionId { get; set; }
+        public bool IncludeItems { get; set; }
     }
 
     /// <summary>
@@ -100,14 +137,13 @@ namespace RestfulApiExample.Web.Controllers.api
     /// </summary>
     public class UpdateCollectionsRequest
     {
-        public UpdateCollectionsRequest() 
+        public UpdateCollectionsRequest()
         {
             this.Collections = new List<CollectionDTO>();
         }
 
         public List<CollectionDTO> Collections { get; set; }
     }
-
     /// <summary>
     /// UpdateCollectionsResponse - returns success or a list of failure messages
     /// </summary>

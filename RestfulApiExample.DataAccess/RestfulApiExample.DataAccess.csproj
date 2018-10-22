@@ -61,6 +61,7 @@
     <Compile Include="Migrations\Configuration.cs" />
     <Compile Include="RestfulApiExampleContext.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RestfulApiRepository.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\RestfulApiExample.Data\RestfulApiExample.Data.csproj">

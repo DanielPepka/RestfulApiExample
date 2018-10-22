@@ -4,80 +4,148 @@
 
 <div class="page-header">
     <div class="row">
-        <h1>ASP.NET single page application built with: </h1>
-        <div class="col-md-4">
-            <p class="lead">ASP.NET, a free web framework for building great Web sites and Web applications using HTML, CSS and JavaScript.</p>
-            <p><a href="https://asp.net" class="btn btn-primary btn-lg">Learn more &raquo;</a></p>
+        <h1>ASP.NET Restful API Example</h1>
+        <p>
+
+        <p>This sample project was built as an example of expanding upon the default ASP.NET template in visual studio to create restful APIs to create, update, and delete records in a database.</p>
+        <div class="panel-group">
+            <div class="panel panel-default">
+                <div class="panel-heading">This was built with the help of the following technologies and resources.</div>
+                <div class="panel-body">
+                    <a class="btn btn-primary " href="https://docs.microsoft.com/en-us/ef/ef6/">Entity Framework</a>
+                    <a class="btn btn-primary " href="https://asp.net">ASP.Net</a>
+                    <a class="btn btn-primary " href="https://www.typescriptlang.org/">Typescript</a>
+                    @*<a class="btn btn-primary " href="https://www.asp.net/signalr">SignalR</a>*@
+                    <a class="btn btn-primary " href="https://knockoutjs.com/">KnockoutJS</a>
+                    @*<a class="btn btn-primary " href="http://sammyjs.org/">SammyJS</a>*@
+                    <a class="btn btn-primary " href="https://getbootstrap.com/docs/3.3/">Bootstrap 3</a>
+                    <a class="btn btn-primary " href="https://fontawesome.com/">FontAwesome</a>
+
+                    <a class="btn btn-primary " href="https://www.w3schools.com/bootstrap/default.asp">W3schools</a>
+                </div>
+            </div>
         </div>
-        <div class="col-md-4">
-            <p class="lead">KnockoutJS</p>
-            <p><a href="https://knockoutjs.com/" class="btn btn-primary btn-lg">Learn more &raquo;</a></p>
-        </div>
-        <div class="col-md-4">
-            <p class="lead">Entity Framework</p>
-            <p><a href="https://docs.microsoft.com/en-us/ef/ef6/" class="btn btn-primary btn-lg">Learn more &raquo;</a></p>
+        </p>
+        <p>
+        <p>This sample project was built as an example of expanding upon the default ASP.NET template in visual studio to create restful APIs to create, update, and delete records in a database.</p>
+        <div class="panel-group">
+            <h3><div class="btn btn-xl btn-primary" data-bind="click: () => { SaveCollections();}">Save Changes</div></h3>
+            <div class="col-md-4">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        List Of Collections.
+                        <a style="float:right" data-bind="click: () => { AddNewCollection();}" class="btn btn-lg btn-primary">Add New</a>
+                    </div>
+
+                    <div style="display:none" class="panel-body" data-bind="visible: Utils.NotNull(collections())">
+                        <div data-bind="if: !(isGettingCollections.isPosting())">
+                            <table class="table table-hover table-bordered" style="margin-bottom: 0px; text-align: center">
+                                <tr>
+                                    <th>
+                                        ID
+                                    </th>
+                                    <th>
+                                        Collection Name
+                                    </th>
+                                    <th>Item Count</th>
+                                    <th style="text-align: center">
+                                        <a class="btn btn-default" data-bind="click: () => { ResetAll() }">Reset All</a>
+                                        <a class="btn btn-default" data-bind="click: () => { DeleteAll(); }">Delete All</a>
+                                    </th>
+                                </tr>
+                                <tbody data-bind="foreach: collections">
+                                    <tr data-bind="click: () => {$parent.SetSelectedCollection(exampleCollectionId);},
+                                        style: {'background-color': Utils.NotNull($parent.selectedCollection()) &&  $parent.selectedCollection().exampleCollectionId === exampleCollectionId ? 'lightgray' : ''},
+                                        css: {'success': isCreate(), 'warning': !isCreate() && !isDelete() && isModified(), 'danger': isDelete()}">
+                                        <td data-bind="text: exampleCollectionId"></td>
+                                        <td>
+                                            <input style="min-width: 100%" class="form-control" data-bind="textInput: name" />
+                                        </td>
+                                        <td>
+                                            <span data-bind="text: Utils.IsNull(exampleItems) ? '-' : exampleItems.length"></span>
+                                        </td>
+                                        <td>
+                                            <span data-bind="if: !isCreate()">
+                                                <a class="btn btn-default" data-bind="click: () => { $parent.ResetCollection(exampleCollectionId); }">Reset</a>
+                                            </span>
+                                            <a class="btn btn-default" data-bind="click: () => { $parent.DeleteCollections([exampleCollectionId]); }">Delete</a>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+
+                    </div>
+                    <div data-bind="if: Utils.IsNull(collections())">
+                        <div class="panel-body">
+                            No collections
+                        </div>
+
+                    </div>
+                    <div data-bind="if: isGettingCollections.isPosting()">
+                        <i class="fa fa-spinner fa-spin"></i>
+                        Loading Collection List ....
+                    </div>
+
+                </div>
+            </div>
+            <div class="col-md-8">
+                <div class="panel panel-default">
+                    <div class="panel-heading">Selected Collection Items <small data-bind="text: Utils.NotNull(selectedCollection()) ? selectedCollection().name : 'none'"> </small></div>
+                    <div class="panel-body">
+                        <div style="display:none" data-bind="visible: !(isGettingSelectedCollection.isPosting())">
+                            <table class="table table-hover table-bordered" style="margin-bottom: 0px;">
+                                <tr>
+                                    <th>
+                                        ID
+                                    </th>
+                                    <th>
+                                        String
+                                    </th>
+                                    <th>
+                                        Int
+                                    </th>
+                                    <th>
+                                        Bool
+                                    </th>
+                                </tr>
+                                <tbody data-bind="foreach: selectedCollection.exampleItems">
+                                    <tr data-bind="css: {'success': isCreate(), 'warning': !isCreate() && !isDelete() && isModified(), 'danger': isDelete()}">
+                                        <td>
+                                            <span data-bind="text: exampleItemId"></span>
+                                        </td>
+                                        <td>
+                                            <span data-bind="textInput: itemString"></span>
+                                        </td>
+                                        <td>
+                                            <span data-bind="textInput: itemInt"></span>
+                                        </td>
+                                        <td>
+                                            <span data-bind="textInput: itemBool"></span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div data-bind="if: (isGettingSelectedCollection.isPosting())">
+                            <i class="fa fa-spinner fa-spin"></i> Loading Selected Collection ....
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
-<div class="row">
-    <div class="col-md-4">
-        <h2>List of Collections</h2>
-        <p data-bind="text: isGettingCollections.isPosting()"></p>
-        <p data-bind="text: collections.length"></p>
-        <p style="display:none" data-bind="visible: isGettingCollections.isPosting()">
-            <ul data-bind="foreach: collections">
-                <li data-bind="click: () => {MyName(); $parent.MyName(); $parent.SetSelectedCollection(exampleCollectionId);}">
-                    <span data-bind="text: name()"></span>
-                </li>
-            </ul>
-        </p>
-        <p data-bind="if: !isGettingCollections.isPosting()">
-            Loading Collection List ....
-        </p>
-    </div>
-    <div class="col-md-8">
-        <h2>Selected Collection Items</h2>
-        !isGettingSelectedCollection.isPosting()
-        <p data-bind="text: isGettingSelectedCollection.isPosting()"></p>
-        <p style="display:none" data-bind="if: !isGettingSelectedCollection.isPosting()">
-            <table data-bind="with: selectedCollection">
-                <tr>
-                    <th>
-                        itemString
-                    </th>
-                    <th>
-                        itemInt
-                    </th>
-                    <th>
-                        itemBool
-                    </th>
-                </tr>
-                <tbody data-bind="foreach: exampleItems">
-                    <tr>
-                        <td>
-                            <span data-bind="text: itemString"></span>
-                        </td>
-                        <td>
-                            <span data-bind="text: itemInt"></span>
-                        </td>
-                        <td>
-                            <span data-bind="text: itemBool"></span>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </p>
-        <p data-bind="if: !isGettingSelectedCollection.isPosting()">
-            Loading Selected Collection ....
-        </p>
-    </div>
-</div>
+
 
 @section Scripts {
     @Scripts.Render("~/bundles/index")
 
     <script type="text/javascript">
+        window.baseUrl = '@string.Format("{0}://{1}{2}", Request.Url.Scheme, Request.Url.Authority, Url.Content("~"))';
+
         $(document).ready(function () {
             window.indexViewModel = new IndexViewModel();
             ko.applyBindings(window.indexViewModel);

@@ -9,30 +9,26 @@ declare module server {
 		isCreate,
 		isUpdate,
 		isDelete,
+		isUnchanged,
 	}
-	interface GenericDTO {
+	interface IGenericDTO {
 		UpdateType: server.UpdateType;
 	}
-	interface CollectionDTO extends GenericDTO {
-		Value: {
-			ExampleCollectionId: number;
-			Name: string;
-			ExampleItems: any[];
-		};
+	interface ItemDTO extends IGenericDTO {
+		/** Primary Key */
+		ExampleItemId: number;
+		/** Example Property Types */
+		ItemString: string;
+		ItemInt: number;
+		ItemBool: boolean;
+		ExampleCollectionId: number;
 	}
-	interface ItemDTO extends GenericDTO {
-		Value: {
-			ExampleItemId: number;
-			ItemString: string;
-			ItemInt: number;
-			ItemBool: boolean;
-			ExampleCollectionId: number;
-			ExampleCollection: {
-				ExampleCollectionId: number;
-				Name: string;
-				ExampleItems: any[];
-			};
-		};
+	interface CollectionDTO extends IGenericDTO {
+		/** Primary Key */
+		ExampleCollectionId: number;
+		Name: string;
+		/** Collection of ItemDTO's, might be null if items are not requested */
+		ItemDTOs: server.ItemDTO[];
 	}
 	/** GetCollectionsRequest can request specific collections, if none are specified it will return all.It can also specify if it should include the items as part of the request. */
 	interface GetCollectionsRequest {
@@ -46,6 +42,7 @@ declare module server {
 	/** GetCollectionRequest requests a collection and its items */
 	interface GetCollectionRequest {
 		ExampleCollectionId: number;
+		IncludeItems: boolean;
 	}
 	/** GetCollectionResponse returns the collection that was requested and all of its items. */
 	interface GetCollectionResponse extends GenericResponse {

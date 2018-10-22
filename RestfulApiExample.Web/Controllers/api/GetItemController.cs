@@ -1,4 +1,6 @@
-﻿using System;
+﻿using RestfulApiExample.DataAccess;
+using RestfulApiExample.Web.Extensions;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -18,6 +20,23 @@ namespace RestfulApiExample.Web.Controllers.api
         public GetItemResponse Post(GetItemRequest request)
         {
             var response = new GetItemResponse { };
+
+            var repo = new RestfulApiRepo();
+            try
+            {
+                var query = repo.GetItem(request.ExampleItemId);
+                response.Item = query.AsItemDTO();
+            }
+            catch (Exception ex)
+            {
+                response.Fail("GetItem", ex);
+            }
+            finally
+            {
+                repo.Dispose();
+            }
+
+            response.End();
             return response;
         }
     }
