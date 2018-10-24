@@ -82,7 +82,7 @@ namespace RestfulApiExample.Web.Controllers.api
         // Collection of ItemDTO's, might be null if items are not requested
         public virtual ICollection<ItemDTO> ItemDTOs { get; set; }
     }
-    
+
     /// <summary>
     /// GetCollectionsRequest can request specific collections, if none are specified it will return all.
     /// It can also specify if it should include the items as part of the request. 
@@ -144,6 +144,7 @@ namespace RestfulApiExample.Web.Controllers.api
 
         public List<CollectionDTO> Collections { get; set; }
     }
+
     /// <summary>
     /// UpdateCollectionsResponse - returns success or a list of failure messages
     /// </summary>
@@ -151,26 +152,33 @@ namespace RestfulApiExample.Web.Controllers.api
     {
         public UpdateCollectionsResponse() : base()
         {
+            this.UpdatedCollectionIds = new List<int>();
         }
+        public List<int> UpdatedCollectionIds { get; set; }
     }
 
     /// <summary>
     /// GetItemRequest requests a Item
     /// </summary>
-    public class GetItemRequest
+    public class GetItemsRequest
     {
-        public int ExampleItemId { get; set; }
+        public GetItemsRequest()
+        {
+            this.ItemIds = new List<int>();
+        }
+        public List<int> ItemIds { get; set; }
     }
 
     /// <summary>
     /// GetItemResponse returns the Item that was requested and all of its items.
     /// </summary>
-    public class GetItemResponse : GenericResponse
+    public class GetItemsResponse : GenericResponse
     {
-        public GetItemResponse() : base()
+        public GetItemsResponse() : base()
         {
+            this.Items = new List<ItemDTO>();
         }
-        public ItemDTO Item { get; set; }
+        public List<ItemDTO> Items { get; set; }
     }
 
     /// <summary>
@@ -189,6 +197,9 @@ namespace RestfulApiExample.Web.Controllers.api
     {
         public UpdateItemsResponse() : base()
         {
+            this.UpdatedItemIds = new List<int>();
         }
+
+        public List<int> UpdatedItemIds { get; set; }
     }
 }

@@ -27,7 +27,7 @@ namespace RestfulApiExample.DataAccess
         }
 
         #region ExampleCollection
-        public void CreateCollection(string name, List<ExampleItem> items = null)
+        public int CreateCollection(string name, List<ExampleItem> items = null)
         {
             var newCollection = new Data.ExampleCollection
             {
@@ -43,6 +43,8 @@ namespace RestfulApiExample.DataAccess
                     CreateItem(newCollection.ExampleCollectionId, item.ItemBool, item.ItemInt, item.ItemString);
                 }
             }
+
+            return newCollection.ExampleCollectionId;
         }
 
         public ExampleCollection GetCollection(int exampleCollectionId, bool includeItems = true)
@@ -59,15 +61,22 @@ namespace RestfulApiExample.DataAccess
         public void DeleteCollection(int exampleCollectionId)
         {
             var collection = GetCollection(exampleCollectionId);
+            this.Context.ExampleItems.RemoveRange(collection.ExampleItems);
             collection.ExampleItems.Clear();
             this.Context.SaveChanges();
             this.Context.ExampleCollections.Remove(collection);
             this.Context.SaveChanges();
         }
 
-        public List<ExampleCollection> GetCollections(bool includeItems = false)
+        public List<ExampleCollection> GetCollections(List<int> collectionIds = null, bool includeItems = false)
         {
             IQueryable<ExampleCollection> query = this.Context.ExampleCollections;
+
+            if(collectionIds != null && collectionIds.Count > 0)
+            {
+                query = query.Where(c => collectionIds.Any(id => id == c.ExampleCollectionId));
+            }
+
             if (includeItems == true)
             {
                 query = query.Include(q => q.ExampleItems);
@@ -101,18 +110,20 @@ namespace RestfulApiExample.DataAccess
 
         #region ExampleItem
 
-        public void CreateItem(int exampleCollectionId, bool itemBool, int itemInt, string itemString)
+        public int CreateItem(int exampleCollectionId, bool itemBool, int itemInt, string itemString)
         {
             var newItem = new Data.ExampleItem
             {
                 ItemBool = itemBool,
                 ItemInt = itemInt,
                 ItemString = itemString,
-                ExampleCollectionId = exampleCollectionId
             };
 
-            this.Context.ExampleItems.Add(newItem);
             this.Context.SaveChanges();
+            var collection = this.GetCollection(exampleCollectionId);
+            collection.ExampleItems.Add(newItem);
+            this.Context.SaveChanges();
+            return newItem.ExampleItemId;
         }
 
         public ExampleItem GetItem(int exampleItemId)

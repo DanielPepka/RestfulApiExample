@@ -54,14 +54,15 @@ declare module server {
 	}
 	/** UpdateCollectionsResponse - returns success or a list of failure messages */
 	interface UpdateCollectionsResponse extends GenericResponse {
+		UpdatedCollectionIds: number[];
 	}
 	/** GetItemRequest requests a Item */
-	interface GetItemRequest {
-		ExampleItemId: number;
+	interface GetItemsRequest {
+		ItemIds: number[];
 	}
 	/** GetItemResponse returns the Item that was requested and all of its items. */
-	interface GetItemResponse extends GenericResponse {
-		Item: server.ItemDTO;
+	interface GetItemsResponse extends GenericResponse {
+		Items: server.ItemDTO[];
 	}
 	/** UpdateItemsRequest Passes a list of items to be updated */
 	interface UpdateItemsRequest {
@@ -70,5 +71,6 @@ declare module server {
 	}
 	/** UpdateItemsResponse - returns success or */
 	interface UpdateItemsResponse extends GenericResponse {
+		UpdatedItemIds: number[];
 	}
 }

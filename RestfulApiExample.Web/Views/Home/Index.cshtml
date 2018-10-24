@@ -33,9 +33,10 @@
             <div class="col-md-4">
                 <div class="panel panel-default">
                     <div class="panel-heading">
-                        List Of Collections.
                         <a style="float:right" data-bind="click: () => { AddNewCollection();}" class="btn btn-lg btn-primary">Add New</a>
+                        <h3>List Of Collections </h3>
                     </div>
+
 
                     <div style="display:none" class="panel-body" data-bind="visible: Utils.NotNull(collections())">
                         <div data-bind="if: !(isGettingCollections.isPosting())">
@@ -49,7 +50,7 @@
                                     </th>
                                     <th>Item Count</th>
                                     <th style="text-align: center">
-                                        <a class="btn btn-default" data-bind="click: () => { ResetAll() }">Reset All</a>
+                                        <a class="btn btn-default" data-bind="click: () => { ResetAll(); }">Reset All</a>
                                         <a class="btn btn-default" data-bind="click: () => { DeleteAll(); }">Delete All</a>
                                     </th>
                                 </tr>
@@ -58,17 +59,25 @@
                                         style: {'background-color': Utils.NotNull($parent.selectedCollection()) &&  $parent.selectedCollection().exampleCollectionId === exampleCollectionId ? 'lightgray' : ''},
                                         css: {'success': isCreate(), 'warning': !isCreate() && !isDelete() && isModified(), 'danger': isDelete()}">
                                         <td data-bind="text: exampleCollectionId"></td>
-                                        <td>
-                                            <input style="min-width: 100%" class="form-control" data-bind="textInput: name" />
+                                        <td style="text-align: left">
+                                            <span data-bind="if: Utils.NotNull($parent.selectedCollection()) &&  ($parent.selectedCollection().exampleCollectionId === exampleCollectionId)">
+                                                <input style="min-width: 100%" class="form-control" data-bind="textInput: name" />
+                                            </span>
+                                            <span data-bind="if: Utils.IsNull($parent.selectedCollection()) ||  ($parent.selectedCollection().exampleCollectionId !== exampleCollectionId)">
+                                                <span style="min-width: 100%" data-bind="text: name" />
+                                            </span>
                                         </td>
                                         <td>
-                                            <span data-bind="text: Utils.IsNull(exampleItems) ? '-' : exampleItems.length"></span>
+                                            <span data-bind="text: itemCount"></span>
                                         </td>
                                         <td>
                                             <span data-bind="if: !isCreate()">
-                                                <a class="btn btn-default" data-bind="click: () => { $parent.ResetCollection(exampleCollectionId); }">Reset</a>
+                                                <a title="Undo any changes made to this collection" class="btn btn-default" data-bind="click: () => { Reset(); }">Reset</a>
                                             </span>
-                                            <a class="btn btn-default" data-bind="click: () => { $parent.DeleteCollections([exampleCollectionId]); }">Delete</a>
+                                            <a title="Mark this collection for delete when the collection is saved." class="btn btn-default" data-bind="click: () => { $parent.DeleteCollections([exampleCollectionId]); }">Delete</a>
+                                            <span data-bind="if: isModified() || isCreate()">
+                                                <a title="Saving a collection also saves its items" class="btn btn-default" data-bind="click: () => { $parent.SaveCollections([exampleCollectionId]); }">Save</a>
+                                            </span>
                                         </td>
                                     </tr>
                                 </tbody>
@@ -92,9 +101,23 @@
             </div>
             <div class="col-md-8">
                 <div class="panel panel-default">
-                    <div class="panel-heading">Selected Collection Items <small data-bind="text: Utils.NotNull(selectedCollection()) ? selectedCollection().name : 'none'"> </small></div>
+                    <div class="panel-heading">
+                        <span data-bind="visible: Utils.NotNull(selectedCollection())"><a style="float:right" data-bind="click: () => { AddNewItem(selectedCollection().exampleCollectionId);}" class="btn btn-lg btn-primary">Add New</a></span>
+                        <h3>Selected Collection <small data-bind="text: Utils.NotNull(selectedCollection()) ? selectedCollection().name : 'none'"> </small></h3>
+                    </div>
                     <div class="panel-body">
-                        <div style="display:none" data-bind="visible: !(isGettingSelectedCollection.isPosting())">
+                        <div data-bind="visible: Utils.IsNull(selectedCollection())">
+                            <div class="panel-body">
+                                No selected collection
+                            </div>
+
+                        </div>
+                        <div data-bind="visible: isGettingSelectedCollection.isPosting()">
+                            <i class="fa fa-spinner fa-spin"></i>
+                            Loading Selected Collection ....
+                        </div>
+
+                        <div style="display:none" data-bind="visible: Utils.NotNull(selectedCollection()) && !(isGettingSelectedCollection.isPosting())">
                             <table class="table table-hover table-bordered" style="margin-bottom: 0px;">
                                 <tr>
                                     <th>
@@ -109,26 +132,41 @@
                                     <th>
                                         Bool
                                     </th>
+                                    <th style="text-align: center">
+                                        <a class="btn btn-default" data-bind="click: () => { ResetAll(); }">Reset All</a>
+                                        <a class="btn btn-default" data-bind="click: () => { DeleteAllItems(); }">Delete All</a>
+                                    </th>
                                 </tr>
-                                <tbody data-bind="foreach: selectedCollection.exampleItems">
+                                <tbody data-bind="foreach: Utils.NotNull(selectedCollection()) ? selectedCollection().exampleItems() : []" -->
                                     <tr data-bind="css: {'success': isCreate(), 'warning': !isCreate() && !isDelete() && isModified(), 'danger': isDelete()}">
                                         <td>
                                             <span data-bind="text: exampleItemId"></span>
                                         </td>
                                         <td>
-                                            <span data-bind="textInput: itemString"></span>
+                                            <input type="text" style="min-width: 100%" class="form-control" data-bind="textInput: itemString" />
                                         </td>
                                         <td>
-                                            <span data-bind="textInput: itemInt"></span>
+                                            <input type="number" style="min-width: 100%" class="form-control" data-bind="textInput: itemInt" />
                                         </td>
                                         <td>
-                                            <span data-bind="textInput: itemBool"></span>
+                                            <input type="checkbox" style="min-width: 100%" class="form-control" data-bind="checked: itemBool" />
+                                        </td>
+                                        <td>
+                                            <span data-bind="if: !isCreate()">
+                                                <a title="Undo any changes made to this item" class="btn btn-default" data-bind="click: () => { Reset(); }">Reset</a>
+                                            </span>
+                                            <a title="Mark this item for delete when it or the collection is saved." class="btn btn-default" data-bind="click: () => { $parent.DeleteItems(exampleCollectionId, [exampleItemId]); }">Delete</a>
+                                            <span data-bind="if: isModified() || isCreate()">
+                                                <a title="Saving the item" class="btn btn-default" data-bind="click: () => { $parent.SaveItem(exampleCollectionId, exampleItemId); }">Save</a>
+                                            </span>
                                         </td>
                                     </tr>
+
                                 </tbody>
                             </table>
                         </div>
-                        <div data-bind="if: (isGettingSelectedCollection.isPosting())">
+
+                        <div style="display:none" data-bind="visible: (isGettingSelectedCollection.isPosting())">
                             <i class="fa fa-spinner fa-spin"></i> Loading Selected Collection ....
                         </div>
                     </div>

@@ -204,7 +204,7 @@
     <Compile Include="App_Start\Startup.Auth.cs" />
     <Compile Include="App_Start\WebApiConfig.cs" />
     <Compile Include="Controllers\AccountController.cs" />
-    <Compile Include="Controllers\api\GetItemController.cs" />
+    <Compile Include="Controllers\api\GetItemsController.cs" />
     <Compile Include="Controllers\api\UpdateItemsController.cs" />
     <Compile Include="Controllers\api\UpdateCollectionsController.cs" />
     <Compile Include="Controllers\api\GetCollectionController.cs" />

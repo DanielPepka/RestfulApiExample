@@ -9,7 +9,7 @@ using System.Web.Http;
 
 namespace RestfulApiExample.Web.Controllers.api
 {
-    public class GetItemController : ApiController
+    public class GetItemsController : ApiController
     {
         // POST: api/GetItem
         /// <summary>
@@ -17,15 +17,18 @@ namespace RestfulApiExample.Web.Controllers.api
         /// </summary>
         /// <param name="request"></param>
         /// <returns>GetItemResponse</returns>
-        public GetItemResponse Post(GetItemRequest request)
+        public GetItemsResponse Post(GetItemsRequest request)
         {
-            var response = new GetItemResponse { };
+            var response = new GetItemsResponse { };
 
             var repo = new RestfulApiRepo();
             try
             {
-                var query = repo.GetItem(request.ExampleItemId);
-                response.Item = query.AsItemDTO();
+                foreach (var itemId in request.ItemIds)
+                {
+                    var query = repo.GetItem(itemId);
+                    response.Items.Add(query.AsItemDTO());
+                }
             }
             catch (Exception ex)
             {

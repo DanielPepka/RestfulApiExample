@@ -25,12 +25,28 @@ namespace RestfulApiExample.Web.Controllers.api
             {
                 foreach (var item in request.Items)
                 {
-                    repo.UpdateItem(
-                        item.ExampleItemId,
-                        item.ItemBool,
-                        item.ItemInt,
-                        item.ItemString
-                    );
+                    switch (item.UpdateType)
+                    {
+                        case UpdateType.IsCreate:
+                            var itemId = repo.CreateItem(request.CollectionId, item.ItemBool, item.ItemInt, "" + item.ItemString);
+                            response.UpdatedItemIds.Add(item.ExampleItemId);
+                            response.UpdatedItemIds.Add(itemId);
+                            break;
+                        case UpdateType.IsUpdate:
+                            repo.UpdateItem(
+                                item.ExampleItemId,
+                                item.ItemBool,
+                                item.ItemInt,
+                                item.ItemString
+                            );
+                            response.UpdatedItemIds.Add(item.ExampleItemId);
+                            break;
+                        case UpdateType.IsDelete:
+                            repo.DeleteItem(item.ExampleItemId);
+                            break;
+                        default:
+                            break;
+                    }
                 }
             }
             catch (Exception ex)

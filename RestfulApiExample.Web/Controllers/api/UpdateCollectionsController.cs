@@ -37,39 +37,28 @@ namespace RestfulApiExample.Web.Controllers.api
                         switch (collectionDTO.UpdateType)
                         {
                             case UpdateType.IsCreate:
-                                repo.CreateCollection(collectionDTO.Name, collectionDTO.ItemDTOs.Select(i => new ExampleItem
+                                var newCollectionId = repo.CreateCollection(collectionDTO.Name, collectionDTO.ItemDTOs.Select(i => new ExampleItem
                                 {
                                     ItemString = i.ItemString,
                                     ItemBool = i.ItemBool,
                                     ItemInt = i.ItemInt
                                 }).ToList());
+                                response.UpdatedCollectionIds.Add(collectionDTO.ExampleCollectionId);
+                                response.UpdatedCollectionIds.Add(newCollectionId);
+
                                 break;
                             case UpdateType.IsUpdate:
                                 repo.UpdateCollection(collectionDTO.ExampleCollectionId, collectionDTO.Name);
+                                response.UpdatedCollectionIds.Add(collectionDTO.ExampleCollectionId);
                                 if (collectionDTO.ItemDTOs != null)
                                 {
-                                    foreach (var itemDTO in collectionDTO.ItemDTOs)
-                                    {
-                                        switch (itemDTO.UpdateType)
-                                        {
-                                            case UpdateType.IsCreate:
-                                                repo.CreateItem(collectionDTO.ExampleCollectionId, itemDTO.ItemBool, itemDTO.ItemInt, itemDTO.ItemString);
-                                                break;
-                                            case UpdateType.IsUpdate:
-                                                repo.UpdateItem(itemDTO.ExampleItemId, itemDTO.ItemBool, itemDTO.ItemInt, itemDTO.ItemString);
-                                                break;
-                                            case UpdateType.IsDelete:
-                                                repo.DeleteItem(itemDTO.ExampleItemId);
-                                                break;
-                                            default:
-                                                break;
-                                        }
-                                    }
+                                    (new UpdateItemsController()).Post(new UpdateItemsRequest { CollectionId = collectionDTO.ExampleCollectionId, Items = collectionDTO.ItemDTOs.ToList() });
                                 }
 
                                 break;
                             case UpdateType.IsDelete:
                                 repo.DeleteCollection(collectionDTO.ExampleCollectionId);
+                                response.UpdatedCollectionIds.Add(collectionDTO.ExampleCollectionId);
                                 break;
                             default:
                                 break;
