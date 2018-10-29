@@ -1,4 +1,16 @@
 declare module server {
+	interface UpdatedRecord {
+		OrigionalId: number;
+		NewId?: number;
+	}
+	interface UpdatedItem extends UpdatedRecord {
+	}
+	interface UpdatedCollection extends UpdatedRecord {
+		UpdatedItemIds: server.UpdatedItem[];
+	}
+	interface GenericRequest {
+		RequestTime: Date;
+	}
 	interface GenericResponse {
 		Success: boolean;
 		Messages: string[];
@@ -31,7 +43,7 @@ declare module server {
 		ItemDTOs: server.ItemDTO[];
 	}
 	/** GetCollectionsRequest can request specific collections, if none are specified it will return all.It can also specify if it should include the items as part of the request. */
-	interface GetCollectionsRequest {
+	interface GetCollectionsRequest extends GenericRequest {
 		CollectionIds: number[];
 		IncludeItems: boolean;
 	}
@@ -40,7 +52,7 @@ declare module server {
 		Collections: server.CollectionDTO[];
 	}
 	/** GetCollectionRequest requests a collection and its items */
-	interface GetCollectionRequest {
+	interface GetCollectionRequest extends GenericRequest {
 		ExampleCollectionId: number;
 		IncludeItems: boolean;
 	}
@@ -49,15 +61,15 @@ declare module server {
 		Collection: server.CollectionDTO;
 	}
 	/** UpdateCollectionsRequest takes a list of collections that need to be updated. Does not update collection items. */
-	interface UpdateCollectionsRequest {
+	interface UpdateCollectionsRequest extends GenericRequest {
 		Collections: server.CollectionDTO[];
 	}
 	/** UpdateCollectionsResponse - returns success or a list of failure messages */
 	interface UpdateCollectionsResponse extends GenericResponse {
-		UpdatedCollectionIds: number[];
+		UpdatedCollectionIds: server.UpdatedCollection[];
 	}
 	/** GetItemRequest requests a Item */
-	interface GetItemsRequest {
+	interface GetItemsRequest extends GenericRequest {
 		ItemIds: number[];
 	}
 	/** GetItemResponse returns the Item that was requested and all of its items. */
@@ -65,12 +77,11 @@ declare module server {
 		Items: server.ItemDTO[];
 	}
 	/** UpdateItemsRequest Passes a list of items to be updated */
-	interface UpdateItemsRequest {
-		CollectionId: number;
+	interface UpdateItemsRequest extends GenericRequest {
 		Items: server.ItemDTO[];
 	}
 	/** UpdateItemsResponse - returns success or */
 	interface UpdateItemsResponse extends GenericResponse {
-		UpdatedItemIds: number[];
+		UpdatedItemIds: server.UpdatedItem[];
 	}
 }

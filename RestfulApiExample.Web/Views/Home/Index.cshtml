@@ -37,7 +37,6 @@
                         <h3>List Of Collections </h3>
                     </div>
 
-
                     <div style="display:none" class="panel-body" data-bind="visible: Utils.NotNull(collections())">
                         <div data-bind="if: !(isGettingCollections.isPosting())">
                             <table class="table table-hover table-bordered" style="margin-bottom: 0px; text-align: center">
@@ -75,7 +74,7 @@
                                                 <a title="Undo any changes made to this collection" class="btn btn-default" data-bind="click: () => { Reset(); }">Reset</a>
                                             </span>
                                             <a title="Mark this collection for delete when the collection is saved." class="btn btn-default" data-bind="click: () => { $parent.DeleteCollections([exampleCollectionId]); }">Delete</a>
-                                            <span data-bind="if: isModified() || isCreate()">
+                                            <span data-bind="if: isModified() || isCreate() || isDelete()">
                                                 <a title="Saving a collection also saves its items" class="btn btn-default" data-bind="click: () => { $parent.SaveCollections([exampleCollectionId]); }">Save</a>
                                             </span>
                                         </td>
@@ -83,8 +82,6 @@
                                 </tbody>
                             </table>
                         </div>
-
-
                     </div>
                     <div data-bind="if: Utils.IsNull(collections())">
                         <div class="panel-body">
@@ -133,7 +130,7 @@
                                         Bool
                                     </th>
                                     <th style="text-align: center">
-                                        <a class="btn btn-default" data-bind="click: () => { ResetAll(); }">Reset All</a>
+                                        <a class="btn btn-default" data-bind="click: () => { ResetSelectedCollection(); }">Reset All</a>
                                         <a class="btn btn-default" data-bind="click: () => { DeleteAllItems(); }">Delete All</a>
                                     </th>
                                 </tr>
@@ -155,13 +152,18 @@
                                             <span data-bind="if: !isCreate()">
                                                 <a title="Undo any changes made to this item" class="btn btn-default" data-bind="click: () => { Reset(); }">Reset</a>
                                             </span>
-                                            <a title="Mark this item for delete when it or the collection is saved." class="btn btn-default" data-bind="click: () => { $parent.DeleteItems(exampleCollectionId, [exampleItemId]); }">Delete</a>
-                                            <span data-bind="if: isModified() || isCreate()">
-                                                <a title="Saving the item" class="btn btn-default" data-bind="click: () => { $parent.SaveItem(exampleCollectionId, exampleItemId); }">Save</a>
+                                            <a title="Mark this item for delete when it or the collection is saved."
+                                               class="btn btn-default"
+                                               data-bind="click: () => { $parent.DeleteItems(exampleCollectionId, [exampleItemId]); }">
+                                                Delete
+                                            </a>
+                                            <span data-bind="if: Utils.NotNull($parent.selectedCollection()) && !($parent.selectedCollection().isCreate())">
+                                                <span data-bind="if: isModified() || isCreate() || isDelete()">
+                                                    <a title="Saving the item" class="btn btn-default" data-bind="click: () => { $parent.SaveItem(exampleCollectionId, exampleItemId); }">Save</a>
+                                                </span>
                                             </span>
                                         </td>
                                     </tr>
-
                                 </tbody>
                             </table>
                         </div>
@@ -175,8 +177,6 @@
         </div>
     </div>
 </div>
-
-
 
 @section Scripts {
     @Scripts.Render("~/bundles/index")

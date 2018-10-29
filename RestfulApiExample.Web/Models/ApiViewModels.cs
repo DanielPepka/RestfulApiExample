@@ -4,6 +4,31 @@ using System.Collections.Generic;
 
 namespace RestfulApiExample.Web.Controllers.api
 {
+    public class UpdatedRecord
+    {
+        public int OrigionalId { get; set; }
+        public int? NewId { get; set; }
+    }
+
+    public class UpdatedItem : UpdatedRecord
+    {
+
+    }
+
+    public class UpdatedCollection : UpdatedRecord
+    {
+        public UpdatedCollection()
+        {
+            this.UpdatedItemIds = new List<UpdatedItem>();
+        }
+        public List<UpdatedItem> UpdatedItemIds { get; set; }
+    }
+
+    public class GenericRequest
+    {
+        public DateTime RequestTime { get; set; }
+    }
+
     public class GenericResponse
     {
         public GenericResponse()
@@ -87,7 +112,7 @@ namespace RestfulApiExample.Web.Controllers.api
     /// GetCollectionsRequest can request specific collections, if none are specified it will return all.
     /// It can also specify if it should include the items as part of the request. 
     /// </summary>
-    public class GetCollectionsRequest
+    public class GetCollectionsRequest : GenericRequest
     {
         public GetCollectionsRequest()
         {
@@ -114,7 +139,7 @@ namespace RestfulApiExample.Web.Controllers.api
     /// <summary>
     /// GetCollectionRequest requests a collection and its items
     /// </summary>
-    public class GetCollectionRequest
+    public class GetCollectionRequest : GenericRequest
     {
         public int ExampleCollectionId { get; set; }
         public bool IncludeItems { get; set; }
@@ -135,7 +160,7 @@ namespace RestfulApiExample.Web.Controllers.api
     /// <summary>
     /// UpdateCollectionsRequest takes a list of collections that need to be updated. Does not update collection items.
     /// </summary>
-    public class UpdateCollectionsRequest
+    public class UpdateCollectionsRequest : GenericRequest
     {
         public UpdateCollectionsRequest()
         {
@@ -152,15 +177,15 @@ namespace RestfulApiExample.Web.Controllers.api
     {
         public UpdateCollectionsResponse() : base()
         {
-            this.UpdatedCollectionIds = new List<int>();
+            this.UpdatedCollectionIds = new List<UpdatedCollection>();
         }
-        public List<int> UpdatedCollectionIds { get; set; }
+        public List<UpdatedCollection> UpdatedCollectionIds { get; set; }
     }
 
     /// <summary>
     /// GetItemRequest requests a Item
     /// </summary>
-    public class GetItemsRequest
+    public class GetItemsRequest : GenericRequest
     {
         public GetItemsRequest()
         {
@@ -184,9 +209,8 @@ namespace RestfulApiExample.Web.Controllers.api
     /// <summary>
     /// UpdateItemsRequest Passes a list of items to be updated
     /// </summary>
-    public class UpdateItemsRequest
+    public class UpdateItemsRequest : GenericRequest
     {
-        public int CollectionId { get; set; }
         public List<ItemDTO> Items { get; set; }
     }
 
@@ -197,9 +221,9 @@ namespace RestfulApiExample.Web.Controllers.api
     {
         public UpdateItemsResponse() : base()
         {
-            this.UpdatedItemIds = new List<int>();
+            this.UpdatedItemIds = new List<UpdatedItem>();
         }
 
-        public List<int> UpdatedItemIds { get; set; }
+        public List<UpdatedItem> UpdatedItemIds { get; set; }
     }
 }

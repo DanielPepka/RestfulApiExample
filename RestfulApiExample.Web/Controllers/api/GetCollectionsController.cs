@@ -28,7 +28,6 @@ namespace RestfulApiExample.Web.Controllers.api
             try
             {
                 List<ExampleCollection> query = repo.GetCollections(request.CollectionIds, request.IncludeItems);
-                
                 response.Collections = query.Select(i => i.AsItemCollectionDTO(request.IncludeItems)).ToList();
             }
             catch (Exception ex)

@@ -72,7 +72,7 @@ var ViewModelBase = /** @class */ (function () {
         // All VM's should know if they are modified or not
         this.isModified = ko.observable(false);
         this.isDelete = ko.observable(false);
-        this.isCreate = ko.observable(true);
+        this.isCreate = ko.observable(false);
         this.isSaving = new AjaxTracker();
         this.original = dto;
         this.isCreate(isAdd);
@@ -95,7 +95,9 @@ var ViewModelBase = /** @class */ (function () {
     };
     // Resets the ViewModel to the unmodified version we fetched from the server.
     ViewModelBase.prototype.Reset = function () {
-        this.Load(this.original);
+        if (Utils.NotNull(this.original)) {
+            this.Load(this.original);
+        }
         this.isModified(false);
         this.isDelete(false);
     };
@@ -106,6 +108,7 @@ var ViewModelBase = /** @class */ (function () {
 /// </summary>
 var ItemVM = /** @class */ (function (_super) {
     __extends(ItemVM, _super);
+    // ItemVM needs a reference back to its collection to inform of it being changed
     function ItemVM(dto, collectionVM) {
         if (dto === void 0) { dto = null; }
         var _this = _super.call(this, dto) || this;
@@ -134,15 +137,16 @@ var ItemVM = /** @class */ (function (_super) {
         console.log("ItemVM");
     };
     // Take the c# server model and convert the values into knockout observables
-    ItemVM.prototype.Load = function (item) {
-        if (item != null) {
+    ItemVM.prototype.Load = function (dto) {
+        if (dto != null) {
+            this.isCreate(dto.UpdateType === 0 /* isCreate */);
             // backup the original object
-            this.original = item;
-            this.exampleItemId = item.ExampleItemId;
-            this.itemString(item.ItemString);
-            this.itemInt(item.ItemInt);
-            this.itemBool(item.ItemBool);
-            this.exampleCollectionId = item.ExampleCollectionId;
+            this.original = dto;
+            this.exampleItemId = dto.ExampleItemId;
+            this.itemString(dto.ItemString);
+            this.itemInt(dto.ItemInt);
+            this.itemBool(dto.ItemBool);
+            this.exampleCollectionId = dto.ExampleCollectionId;
         }
     };
     ;
@@ -194,7 +198,6 @@ var CollectionVM = /** @class */ (function (_super) {
             return count;
         });
         if (Utils.NotNull(dto)) {
-            _this.isCreate(false);
             _this.Load(dto);
         }
         // Whenever something changes we need to check if we have entered a state that can be saved.
@@ -205,18 +208,19 @@ var CollectionVM = /** @class */ (function (_super) {
         console.log("CollectionVM");
     };
     // Take the c# server model and convert the values into knockout observables
-    CollectionVM.prototype.Load = function (item) {
+    CollectionVM.prototype.Load = function (dto) {
         var _this = this;
-        if (item === void 0) { item = null; }
-        if (item != null) {
+        if (dto === void 0) { dto = null; }
+        if (dto != null) {
             // backup the original object
-            this.original = item;
+            this.original = dto;
+            this.isCreate(dto.UpdateType === 0 /* isCreate */);
             // store the collection info
-            this.exampleCollectionId = item.ExampleCollectionId;
-            this.name(item.Name);
+            this.exampleCollectionId = dto.ExampleCollectionId;
+            this.name(dto.Name);
             // check if there are any example items, if so load those too
-            if (item.ItemDTOs !== null && item.ItemDTOs !== undefined) {
-                var collectionItems = ko.utils.arrayMap(item.ItemDTOs, function (i) {
+            if (dto.ItemDTOs !== null && dto.ItemDTOs !== undefined) {
+                var collectionItems = ko.utils.arrayMap(dto.ItemDTOs, function (i) {
                     return new ItemVM(i, _this);
                 });
                 this.exampleItems(collectionItems);
@@ -282,95 +286,63 @@ var IndexViewModel = /** @class */ (function () {
                 return true;
             }
         });
-        this.deleteAllToggle = ko.observable(false);
+        this.deleteAllCollectionsToggle = ko.observable(false);
         this.deleteAllItemsToggle = ko.observable(true);
         this.isModified = ko.observable();
         this.GetCollections();
-        this.collections.subscribe(function (newValue) { _this.CheckIfModified(); });
+        this.collections.subscribe(function (newValue) {
+            _this.CheckIfModified();
+            // update the selected collection
+            if (Utils.NotNull(_this.selectedCollection())) {
+                _this.selectedCollection(_this.GetCollectionById(_this.selectedCollection().exampleCollectionId));
+            }
+        });
         this.selectedCollection.subscribe(function (newValue) { _this.deleteAllItemsToggle(true); });
     }
     IndexViewModel.prototype.MyName = function () {
         console.log("IndexViewModel");
     };
-    IndexViewModel.prototype.GetItems = function (selectedCollectionId, itemIds) {
-        var _this = this;
-        if (itemIds === void 0) { itemIds = []; }
-        // remove from our collections all of the ones we are trying to fetch
-        var collection = this.GetCollectionById(selectedCollectionId);
-        var items = collection.exampleItems();
-        ko.utils.arrayForEach(itemIds, function (itemId) {
-            var existing = ko.utils.arrayFirst(items, function (item) {
-                return item.exampleItemId === itemId;
-            });
-            if (Utils.NotNull(existing)) {
-                ko.utils.arrayRemoveItem(items, existing);
-            }
-            else {
-                // :shrug:
-            }
-        });
-        collection.exampleItems(items);
-        var request = {
-            // no point in requesting an item that had a temp id
-            ItemIds: ko.utils.arrayFilter(itemIds, function (item) { return item > 0; })
-        };
-        Utils.Post("GetItems", this.isGettingItems, request, function (response) {
-            if (Utils.NotNull(response.Items)) {
-                var collection_1 = _this.GetCollectionById(selectedCollectionId);
-                // now add all of them back
-                // TODO: splicing back in the same place to give a better user experiance
-                var newItems = ko.utils.arrayMap(response.Items, function (i) {
-                    return new ItemVM(i, collection_1);
-                });
-                var items_1 = collection_1.exampleItems();
-                ko.utils.arrayPushAll(items_1, newItems);
-                // do logic to only replace the collection if it was requested.
-                collection_1.exampleItems(items_1);
-                collection_1.CheckIfModified();
-                if (Utils.NotNull(_this.selectedCollection()) && _this.selectedCollection().exampleCollectionId == selectedCollectionId) {
-                    _this.selectedCollection(_this.GetCollectionById(_this.selectedCollection().exampleCollectionId));
-                }
-            }
-        });
-    };
     IndexViewModel.prototype.GetCollections = function (collectionIds, includeItems) {
         var _this = this;
         if (collectionIds === void 0) { collectionIds = []; }
         if (includeItems === void 0) { includeItems = false; }
-        console.log("get col: " + ko.toJSON(collectionIds));
-        // remove from our collections all of the ones we are trying to fetch
-        var collections = this.collections();
-        ko.utils.arrayForEach(collectionIds, function (collectionId) {
-            var existing = ko.utils.arrayFirst(collections, function (item) {
-                return item.exampleCollectionId === collectionId;
-            });
-            if (Utils.NotNull(existing)) {
-                ko.utils.arrayRemoveItem(collections, existing);
-            }
-            else {
-                // :shrug:
-            }
-        });
-        this.collections(collections);
         var request = {
+            RequestTime: new Date(),
             // no point in requesting collections that had a temp id
-            CollectionIds: ko.utils.arrayFilter(collectionIds, function (item) { return item > 0; }),
+            CollectionIds: collectionIds,
             IncludeItems: includeItems
         };
         Utils.Post("GetCollections", this.isGettingCollections, request, function (response) {
             if (Utils.NotNull(response.Collections)) {
-                // now add all of them back
-                // TODO: splicing back in the same place to give a better user experiance
-                var newCollections = ko.utils.arrayMap(response.Collections, function (i) {
-                    return new CollectionVM(i);
-                });
                 var collections_1 = _this.collections();
-                ko.utils.arrayPushAll(collections_1, newCollections);
-                // do logic to only replace the collection if it was requested.
+                // so for each item fetched, look for it in the list of existing items
+                ko.utils.arrayForEach(response.Collections, function (collectionDTO) {
+                    var collectionVM = ko.utils.arrayFirst(collections_1, function (collection) {
+                        return collection.exampleCollectionId === collectionDTO.ExampleCollectionId;
+                    });
+                    var updatedCollection = new CollectionVM(collectionDTO);
+                    // if we found it, then splice it in to replace the old version
+                    if (Utils.NotNull(collectionVM)) {
+                        var index = ko.utils.arrayIndexOf(collections_1, collectionVM);
+                        collections_1.splice(index, 1, updatedCollection);
+                    }
+                    // we don't have it in the list, which means it is new so just add it
+                    else {
+                        collections_1.push(updatedCollection);
+                    }
+                });
                 _this.collections(collections_1);
-                // refresh the selected collection
+                // now update the modified value
+                _this.CheckIfModified();
+                // do logic to only replace the displayed collection if the item modified was in that collection
                 if (Utils.NotNull(_this.selectedCollection())) {
-                    _this.selectedCollection(_this.GetCollectionById(_this.selectedCollection().exampleCollectionId));
+                    var selectedCollectionModified = ko.utils.arrayFirst(response.Collections, function (collectionDTO) {
+                        return collectionDTO.ExampleCollectionId === _this.selectedCollection().exampleCollectionId;
+                    });
+                    // if the selected collection is modified, we need to refresh it with the updated version stored in the list
+                    if (Utils.NotNull(selectedCollectionModified)) {
+                        _this.selectedCollection(_this.GetCollectionById(_this.selectedCollection().exampleCollectionId));
+                    }
                 }
             }
         });
@@ -387,6 +359,7 @@ var IndexViewModel = /** @class */ (function () {
             else {
                 // We need to load the contents haven't saved it to the server yet, just work locally.
                 var request = {
+                    RequestTime: new Date(),
                     ExampleCollectionId: selectedCollectionId,
                     IncludeItems: true
                 };
@@ -436,78 +409,168 @@ var IndexViewModel = /** @class */ (function () {
     };
     IndexViewModel.prototype.SaveItem = function (collectionId, itemId) {
         var _this = this;
+        // First lookup the collection
         var collection = ko.utils.arrayFirst(this.collections(), function (collectionVM) {
             return collectionVM.exampleCollectionId == collectionId;
         });
+        // if it exists
         if (Utils.NotNull(collection)) {
-            var item = ko.utils.arrayFirst(collection.exampleItems(), function (itemVM) {
+            // look for the item requested to be saved
+            var item_1 = ko.utils.arrayFirst(collection.exampleItems(), function (itemVM) {
                 return itemVM.exampleItemId === itemId;
             });
-            var items = [];
-            if (Utils.NotNull(item)) {
-                items.push(item.AsDto());
+            // if it exists
+            if (Utils.NotNull(item_1)) {
                 var request = {
-                    Items: items,
-                    CollectionId: collectionId
+                    RequestTime: new Date(),
+                    Items: [item_1.AsDto()]
                 };
-                Utils.Post("UpdateItems", item.isSaving, request, function (response) {
-                    _this.GetItems(collectionId, response.UpdatedItemIds);
+                Utils.Post("UpdateItems", item_1.isSaving, request, function (response) {
+                    var items = collection.exampleItems();
+                    // so we finished the update, look for the item and change its id to reflect the new value
+                    var updatedItem = ko.utils.arrayFirst(response.UpdatedItemIds, function (updatedItem) {
+                        return updatedItem.OrigionalId == item_1.exampleItemId;
+                    });
+                    // then request that it be updated
+                    if (Utils.NotNull(updatedItem)) {
+                        item_1.exampleItemId = updatedItem.NewId;
+                        if (Utils.IsNull(updatedItem.NewId)) {
+                            ko.utils.arrayRemoveItem(items, item_1);
+                            if (Utils.NotNull(collection.original)) {
+                                var origItem = ko.utils.arrayFirst(collection.original.ItemDTOs, function (item) {
+                                    return item.ExampleItemId === updatedItem.OrigionalId;
+                                });
+                                ko.utils.arrayRemoveItem(collection.original.ItemDTOs, origItem);
+                            }
+                            collection.exampleItems(items);
+                        }
+                        else {
+                            _this.GetItemsForCollection(collectionId, [updatedItem.NewId]);
+                        }
+                    }
+                    collection.CheckIfModified();
                 });
             }
         }
     };
+    IndexViewModel.prototype.GetItemsForCollection = function (collectionId, itemIds) {
+        var _this = this;
+        if (itemIds === void 0) { itemIds = []; }
+        // if the list of items is null
+        var request = {
+            RequestTime: new Date(),
+            // no point in requesting an item that has a temp id
+            ItemIds: ko.utils.arrayFilter(itemIds, function (item) { return item > 0; })
+        };
+        Utils.Post("GetItems", this.isGettingItems, request, function (response) {
+            if (Utils.NotNull(response.Items)) {
+                var collection_1 = _this.GetCollectionById(collectionId);
+                // now add all of them back
+                // TODO: splicing back in the same place to give a better user experience
+                var items_1 = collection_1.exampleItems();
+                // so for each item fetched, look for it in the list of existing items
+                ko.utils.arrayForEach(response.Items, function (i) {
+                    var itemVM = ko.utils.arrayFirst(items_1, function (item) {
+                        return item.exampleItemId === i.ExampleItemId;
+                    });
+                    var updatedItem = new ItemVM(i, collection_1);
+                    // if we found it, then splice it in to replace the old version
+                    if (Utils.NotNull(itemVM)) {
+                        var index = ko.utils.arrayIndexOf(items_1, itemVM);
+                        items_1.splice(index, 1, updatedItem);
+                    }
+                    // we don't have it in the list, which means it is new so just add it
+                    else {
+                        items_1.push(updatedItem);
+                    }
+                });
+                collection_1.exampleItems(items_1);
+                // now update the modified value
+                collection_1.CheckIfModified();
+                // do logic to only replace the displayed collection if the item modified was in that collection
+                if (Utils.NotNull(_this.selectedCollection()) && _this.selectedCollection().exampleCollectionId == collectionId) {
+                    _this.selectedCollection(_this.GetCollectionById(_this.selectedCollection().exampleCollectionId));
+                }
+            }
+        });
+    };
     // Save changes to all collections and all DTOs that have changed, optionally just save the collections of the ids passed in.
+    // save collections also saves the items
     IndexViewModel.prototype.SaveCollections = function (collectionIds) {
         var _this = this;
         if (collectionIds === void 0) { collectionIds = []; }
         var filtered = [];
+        // first find each of the collections that were requested to be saved and put them in a list
         filtered = ko.utils.arrayFilter(this.collections(), function (item) {
             var result = false;
+            // so if the collection ids aren't null, look 
             if (Utils.NotNull(collectionIds)) {
                 var exists = ko.utils.arrayFirst(collectionIds, function (collectionId) {
                     return collectionId === item.exampleCollectionId;
                 });
                 result = Utils.NotNull(exists);
             }
+            // if they are null, then just... save all collections which are modified
             else {
                 result = item.isModified() || item.isCreate() || item.isDelete();
             }
             return result;
         });
-        var collections = ko.utils.arrayMap(filtered, function (collectionVM) {
-            var collectionDTO = collectionVM.AsDto();
-            collectionDTO.UpdateType = collectionVM.GetUpdateType();
-            return collectionDTO;
+        // map the collections to be saved into DTOs, this includes any changes to items
+        var collectionDTOs = ko.utils.arrayMap(filtered, function (collectionVM) {
+            return collectionVM.AsDto();
         });
         var request = {
-            Collections: collections
+            RequestTime: new Date(),
+            Collections: collectionDTOs
         };
-        ko.utils.arrayForEach(collections, function (item) {
-            if (Utils.NotNull(_this.selectedCollection()) && (item.UpdateType === 2 /* isDelete */) && (item.ExampleCollectionId === _this.selectedCollection().exampleCollectionId)) {
-                _this.selectedCollection(null);
-            }
-        });
         Utils.Post("UpdateCollections", this.isSavingCollections, request, function (response) {
-            console.log("UpdateCollections: " + response.UpdatedCollectionIds);
+            // so now we updated the collections, look for any that were created new or removed
             if (Utils.NotNull(response.UpdatedCollectionIds)) {
-                _this.GetCollections(response.UpdatedCollectionIds, true);
+                var collections_2 = _this.collections();
+                var collectionIds_1 = [];
+                // so we finished the update, look for each collection that was added and collection and change its id to reflect the new value
+                ko.utils.arrayForEach(response.UpdatedCollectionIds, function (updatedCollection) {
+                    // find the original collection
+                    var collectionVM = ko.utils.arrayFirst(collections_2, function (collection) {
+                        return collection.exampleCollectionId === updatedCollection.OrigionalId;
+                    });
+                    if (Utils.IsNull(updatedCollection.NewId)) {
+                        ko.utils.arrayRemoveItem(collections_2, collectionVM);
+                    }
+                    else {
+                        // if the original value is 0 or less then we were adding a new collection
+                        collectionIds_1.push(updatedCollection.NewId);
+                        if (updatedCollection.OrigionalId <= 0) {
+                            if (Utils.NotNull(collectionVM)) {
+                                collectionVM.exampleCollectionId = updatedCollection.NewId;
+                            }
+                        }
+                    }
+                    // if the updated value is null, we removed it
+                });
+                _this.collections(collections_2);
+                _this.GetCollections(collectionIds_1, true);
             }
         });
     };
     IndexViewModel.prototype.AddNewCollection = function () {
-        var newCollection = new CollectionVM();
-        newCollection.name("New Collection");
-        newCollection.isCreate(true);
         var collectionIds = ko.utils.arrayMap(this.collections(), function (item) { return item.exampleCollectionId; });
         var minCollectionId = Math.min.apply(Math, collectionIds) - 1;
         if (minCollectionId > 0) {
             minCollectionId = 0;
         }
-        newCollection.exampleCollectionId = minCollectionId;
+        var newCollectionDTO = {
+            Name: "New Collection",
+            ExampleCollectionId: minCollectionId,
+            ItemDTOs: [],
+            UpdateType: 0 /* isCreate */
+        };
+        var newCollection = new CollectionVM(newCollectionDTO);
         this.collections.push(newCollection);
     };
     IndexViewModel.prototype.DeleteAll = function () {
-        this.deleteAllToggle(!this.deleteAllToggle());
+        this.deleteAllCollectionsToggle(!this.deleteAllCollectionsToggle());
         var collections = this.collections();
         this.DeleteCollections(ko.utils.arrayMap(collections, function (item) {
             return item.exampleCollectionId;
@@ -532,7 +595,7 @@ var IndexViewModel = /** @class */ (function () {
             }
             else {
                 if (useToggle) {
-                    collection.isDelete(_this.deleteAllToggle());
+                    collection.isDelete(_this.deleteAllCollectionsToggle());
                 }
                 else {
                     collection.isDelete(!collection.isDelete());
@@ -561,20 +624,35 @@ var IndexViewModel = /** @class */ (function () {
                     else {
                         item.isDelete(!item.isDelete());
                     }
-                    item.isDelete(!item.isDelete());
                 }
             }
         });
         collection.exampleItems(items);
     };
     IndexViewModel.prototype.ResetAll = function () {
-        ko.utils.arrayForEach(this.collections(), function (item) {
-            item.Reset();
+        var collections = this.collections();
+        ko.utils.arrayForEach(collections, function (collection) {
+            if (Utils.NotNull(collection)) {
+                collection.Reset();
+            }
         });
+        this.collections(collections);
     };
-    IndexViewModel.prototype.ResetCollection = function (collectionId) {
-        var collection = this.GetCollectionById(collectionId);
+    IndexViewModel.prototype.ResetSelectedCollection = function () {
+        var collection = this.selectedCollection();
+        var items = collection.exampleItems();
+        if (Utils.NotNull(items)) {
+            ko.utils.arrayForEach(collection.exampleItems(), function (exampleItem) {
+                if (Utils.NotNull(exampleItem)) {
+                    exampleItem.Reset();
+                }
+            });
+            collection.exampleItems(items);
+        }
         collection.Reset();
+        collection.CheckIfModified();
+        this.selectedCollection(collection);
+        this.CheckIfModified();
     };
     IndexViewModel.prototype.ResetItem = function (collectionId, itemId) {
     };
@@ -595,10 +673,12 @@ var IndexViewModel = /** @class */ (function () {
         newItem.itemString("New Item");
         newItem.itemInt(0);
         newItem.itemBool(false);
+        newItem.exampleCollectionId = this.selectedCollection().exampleCollectionId;
+        newItem.isCreate(true);
         var items = this.selectedCollection().exampleItems();
         items.push(newItem);
         this.selectedCollection().exampleItems(items);
-        this.selectedCollection().CheckIfModified();
+        this.selectedCollection().isModified(true);
     };
     IndexViewModel.prototype.CheckIfModified = function () {
         var isModified = false;

@@ -23,29 +23,33 @@ namespace RestfulApiExample.Web.Controllers.api
             var repo = new RestfulApiRepo();
             try
             {
-                foreach (var item in request.Items)
+                var itemsGroupedByCollection = request.Items.GroupBy(i => i.ExampleCollectionId).ToList();
+                foreach(var collectionItemGrouping in itemsGroupedByCollection)
                 {
-                    switch (item.UpdateType)
+                    foreach (var item in collectionItemGrouping)
                     {
-                        case UpdateType.IsCreate:
-                            var itemId = repo.CreateItem(request.CollectionId, item.ItemBool, item.ItemInt, "" + item.ItemString);
-                            response.UpdatedItemIds.Add(item.ExampleItemId);
-                            response.UpdatedItemIds.Add(itemId);
-                            break;
-                        case UpdateType.IsUpdate:
-                            repo.UpdateItem(
-                                item.ExampleItemId,
-                                item.ItemBool,
-                                item.ItemInt,
-                                item.ItemString
-                            );
-                            response.UpdatedItemIds.Add(item.ExampleItemId);
-                            break;
-                        case UpdateType.IsDelete:
-                            repo.DeleteItem(item.ExampleItemId);
-                            break;
-                        default:
-                            break;
+                        switch (item.UpdateType)
+                        {
+                            case UpdateType.IsCreate:
+                                var itemId = repo.CreateItem(item.ExampleCollectionId, item.ItemBool, item.ItemInt, "" + item.ItemString);
+                                response.UpdatedItemIds.Add(new UpdatedItem { OrigionalId = item.ExampleItemId, NewId = itemId });
+                                break;
+                            case UpdateType.IsUpdate:
+                                repo.UpdateItem(
+                                    item.ExampleItemId,
+                                    item.ItemBool,
+                                    item.ItemInt,
+                                    item.ItemString
+                                );
+                                response.UpdatedItemIds.Add(new UpdatedItem { OrigionalId = item.ExampleItemId, NewId = item.ExampleItemId });
+                                break;
+                            case UpdateType.IsDelete:
+                                repo.DeleteItem(item.ExampleItemId);
+                                response.UpdatedItemIds.Add(new UpdatedItem { OrigionalId = item.ExampleItemId, NewId = null });
+                                break;
+                            default:
+                                break;
+                        }
                     }
                 }
             }

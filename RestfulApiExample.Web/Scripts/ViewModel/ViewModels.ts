@@ -69,7 +69,7 @@ abstract class ViewModelBase<Type> {
     // All VM's should know if they are modified or not
     isModified: KnockoutObservable<boolean> = ko.observable(false);
     isDelete: KnockoutObservable<boolean> = ko.observable(false);
-    isCreate: KnockoutObservable<boolean> = ko.observable(true);
+    isCreate: KnockoutObservable<boolean> = ko.observable(false);
     isSaving: AjaxTracker = new AjaxTracker();
 
     /// Load takes the server.DTO and maps it into a knockout observable version. 
@@ -96,7 +96,9 @@ abstract class ViewModelBase<Type> {
 
     // Resets the ViewModel to the unmodified version we fetched from the server.
     Reset() {
-        this.Load(this.original);
+        if (Utils.NotNull(this.original)) {
+            this.Load(this.original);
+        }
         this.isModified(false);
         this.isDelete(false);
     }
@@ -124,16 +126,16 @@ class ItemVM extends ViewModelBase<server.ItemDTO> {
     exampleCollectionId: number = 0;
 
     // Take the c# server model and convert the values into knockout observables
-    Load(item: server.ItemDTO): void {
-        if (item != null) {
+    Load(dto: server.ItemDTO): void {
+        if (dto != null) {
+            this.isCreate(dto.UpdateType === server.UpdateType.isCreate);
             // backup the original object
-            this.original = item;
-
-            this.exampleItemId = item.ExampleItemId;
-            this.itemString(item.ItemString);
-            this.itemInt(item.ItemInt);
-            this.itemBool(item.ItemBool);
-            this.exampleCollectionId = item.ExampleCollectionId;
+            this.original = dto;
+            this.exampleItemId = dto.ExampleItemId;
+            this.itemString(dto.ItemString);
+            this.itemInt(dto.ItemInt);
+            this.itemBool(dto.ItemBool);
+            this.exampleCollectionId = dto.ExampleCollectionId;
         }
     };
 
@@ -168,6 +170,8 @@ class ItemVM extends ViewModelBase<server.ItemDTO> {
     }
 
     collectionVM: CollectionVM;
+
+    // ItemVM needs a reference back to its collection to inform of it being changed
     constructor(dto: server.ItemDTO = null, collectionVM: CollectionVM) {
         super(dto);
         this.collectionVM = collectionVM;
@@ -207,18 +211,18 @@ class CollectionVM extends ViewModelBase<server.CollectionDTO> {
     });
 
     // Take the c# server model and convert the values into knockout observables
-    Load(item: server.CollectionDTO = null): void {
-        if (item != null) {
+    Load(dto: server.CollectionDTO = null): void {
+        if (dto != null) {
             // backup the original object
-            this.original = item;
-
+            this.original = dto;
+            this.isCreate(dto.UpdateType === server.UpdateType.isCreate);
             // store the collection info
-            this.exampleCollectionId = item.ExampleCollectionId;
-            this.name(item.Name);
+            this.exampleCollectionId = dto.ExampleCollectionId;
+            this.name(dto.Name);
 
             // check if there are any example items, if so load those too
-            if (item.ItemDTOs !== null && item.ItemDTOs !== undefined) {
-                let collectionItems: ItemVM[] = ko.utils.arrayMap(item.ItemDTOs, (i: server.ItemDTO) => {
+            if (dto.ItemDTOs !== null && dto.ItemDTOs !== undefined) {
+                let collectionItems: ItemVM[] = ko.utils.arrayMap(dto.ItemDTOs, (i: server.ItemDTO) => {
                     return new ItemVM(i, this);
                 });
 
@@ -262,7 +266,6 @@ class CollectionVM extends ViewModelBase<server.CollectionDTO> {
     constructor(dto: server.CollectionDTO = null) {
         super(dto);
         if (Utils.NotNull(dto)) {
-            this.isCreate(false);
             this.Load(dto);
         }
 
@@ -309,91 +312,50 @@ class IndexViewModel {
     });
 
 
-    GetItems(selectedCollectionId: number, itemIds: number[] = []) {
-
-        // remove from our collections all of the ones we are trying to fetch
-        let collection: CollectionVM = this.GetCollectionById(selectedCollectionId);
-        let items = collection.exampleItems();
-        ko.utils.arrayForEach(itemIds, (itemId: number) => {
-            var existing = ko.utils.arrayFirst(items, (item: ItemVM) => {
-                return item.exampleItemId === itemId;
-            });
-            if (Utils.NotNull(existing)) {
-                ko.utils.arrayRemoveItem(items, existing);
-            } else {
-                // :shrug:
-            }
-        });
-
-        collection.exampleItems(items);
-        let request: server.GetItemsRequest = {
-            // no point in requesting an item that had a temp id
-            ItemIds: ko.utils.arrayFilter(itemIds, (item: number) => { return item > 0; })
-        };
-
-        Utils.Post("GetItems", this.isGettingItems, request, (response: server.GetItemsResponse) => {
-            if (Utils.NotNull(response.Items)) {
-
-                let collection: CollectionVM = this.GetCollectionById(selectedCollectionId);
-                // now add all of them back
-                // TODO: splicing back in the same place to give a better user experiance
-                let newItems: ItemVM[] = ko.utils.arrayMap(response.Items, (i: server.ItemDTO) => {
-                    return new ItemVM(i, collection);
-                });
-
-                let items = collection.exampleItems();
-                ko.utils.arrayPushAll(items, newItems)
-
-                // do logic to only replace the collection if it was requested.
-                collection.exampleItems(items);
-                collection.CheckIfModified();
-                if (Utils.NotNull(this.selectedCollection()) && this.selectedCollection().exampleCollectionId == selectedCollectionId) {
-                    this.selectedCollection(this.GetCollectionById(this.selectedCollection().exampleCollectionId));
-                }
-            }
-        });
-    }
-
     GetCollections(collectionIds: number[] = [], includeItems: boolean = false) {
-
-        console.log("get col: " + ko.toJSON(collectionIds));
-        // remove from our collections all of the ones we are trying to fetch
-        let collections = this.collections();
-        ko.utils.arrayForEach(collectionIds, (collectionId: number) => {
-            var existing = ko.utils.arrayFirst(collections, (item: CollectionVM) => {
-                return item.exampleCollectionId === collectionId;
-            });
-            if (Utils.NotNull(existing)) {
-                ko.utils.arrayRemoveItem(collections, existing);
-            } else {
-                // :shrug:
-            }
-        });
-        this.collections(collections)
         let request: server.GetCollectionsRequest = {
+            RequestTime: new Date(),
             // no point in requesting collections that had a temp id
-            CollectionIds: ko.utils.arrayFilter(collectionIds, (item: number) => { return item > 0; }),
+            CollectionIds: collectionIds,
             IncludeItems: includeItems
         };
 
         Utils.Post("GetCollections", this.isGettingCollections, request, (response: server.GetCollectionsResponse) => {
             if (Utils.NotNull(response.Collections)) {
+                let collections: CollectionVM[] = this.collections();
 
-                // now add all of them back
-                // TODO: splicing back in the same place to give a better user experiance
-                let newCollections: CollectionVM[] = ko.utils.arrayMap(response.Collections, (i: server.CollectionDTO) => {
-                    return new CollectionVM(i);
+                // so for each item fetched, look for it in the list of existing items
+                ko.utils.arrayForEach(response.Collections, (collectionDTO: server.CollectionDTO) => {
+                    let collectionVM: CollectionVM = ko.utils.arrayFirst(collections, (collection: CollectionVM) => {
+                        return collection.exampleCollectionId === collectionDTO.ExampleCollectionId;
+                    });
+
+                    let updatedCollection: CollectionVM = new CollectionVM(collectionDTO);
+                    // if we found it, then splice it in to replace the old version
+                    if (Utils.NotNull(collectionVM)) {
+                        let index: number = ko.utils.arrayIndexOf(collections, collectionVM);
+                        collections.splice(index, 1, updatedCollection);
+                    }
+                    // we don't have it in the list, which means it is new so just add it
+                    else {
+                        collections.push(updatedCollection);
+                    }
                 });
 
-                let collections = this.collections();
-                ko.utils.arrayPushAll(collections, newCollections)
-
-                // do logic to only replace the collection if it was requested.
                 this.collections(collections);
-                // refresh the selected collection
+                // now update the modified value
+                this.CheckIfModified();
 
+                // do logic to only replace the displayed collection if the item modified was in that collection
                 if (Utils.NotNull(this.selectedCollection())) {
-                    this.selectedCollection(this.GetCollectionById(this.selectedCollection().exampleCollectionId));
+                    let selectedCollectionModified: server.CollectionDTO = ko.utils.arrayFirst(response.Collections, (collectionDTO: server.CollectionDTO) => {
+                        return collectionDTO.ExampleCollectionId === this.selectedCollection().exampleCollectionId
+                    });
+
+                    // if the selected collection is modified, we need to refresh it with the updated version stored in the list
+                    if (Utils.NotNull(selectedCollectionModified)) {
+                        this.selectedCollection(this.GetCollectionById(this.selectedCollection().exampleCollectionId));
+                    }
                 }
             }
         });
@@ -410,6 +372,7 @@ class IndexViewModel {
             } else {
                 // We need to load the contents haven't saved it to the server yet, just work locally.
                 let request: server.GetCollectionRequest = {
+                    RequestTime: new Date(),
                     ExampleCollectionId: selectedCollectionId,
                     IncludeItems: true
                 };
@@ -463,89 +426,190 @@ class IndexViewModel {
     }
 
     SaveItem(collectionId: number, itemId: number) {
+        // First lookup the collection
         let collection: CollectionVM = ko.utils.arrayFirst(this.collections(), (collectionVM: CollectionVM) => {
             return collectionVM.exampleCollectionId == collectionId;
         });
 
+        // if it exists
         if (Utils.NotNull(collection)) {
+            // look for the item requested to be saved
             let item: ItemVM = ko.utils.arrayFirst(collection.exampleItems(), (itemVM: ItemVM) => {
                 return itemVM.exampleItemId === itemId;
             });
 
-            let items: server.ItemDTO[] = [];
+            // if it exists
             if (Utils.NotNull(item)) {
-                items.push(item.AsDto());
-
                 let request: server.UpdateItemsRequest = {
-                    Items: items,
-                    CollectionId: collectionId
+                    RequestTime: new Date(),
+                    Items: [item.AsDto()]
                 };
 
                 Utils.Post("UpdateItems", item.isSaving, request, (response: server.UpdateItemsResponse) => {
-                    this.GetItems(collectionId, response.UpdatedItemIds);
+                    let items: ItemVM[] = collection.exampleItems();
+                    // so we finished the update, look for the item and change its id to reflect the new value
+
+                    let updatedItem: server.UpdatedItem = ko.utils.arrayFirst(response.UpdatedItemIds, (updatedItem: server.UpdatedItem) => {
+                        return updatedItem.OrigionalId == item.exampleItemId;
+                    });
+
+                    // then request that it be updated
+                    if (Utils.NotNull(updatedItem)) {
+                        item.exampleItemId = updatedItem.NewId;
+
+                        if (Utils.IsNull(updatedItem.NewId)) {
+                            ko.utils.arrayRemoveItem(items, item);
+
+                            if (Utils.NotNull(collection.original)) {
+                                let origItem: server.ItemDTO = ko.utils.arrayFirst(collection.original.ItemDTOs, (item: server.ItemDTO) => {
+                                    return item.ExampleItemId === updatedItem.OrigionalId
+                                });
+                                ko.utils.arrayRemoveItem(collection.original.ItemDTOs, origItem);
+                            }
+
+                            collection.exampleItems(items);
+                        } else {
+                            this.GetItemsForCollection(collectionId, [updatedItem.NewId]);
+                        }
+                    }
+                    collection.CheckIfModified();
                 });
             }
         }
+
+
+    }
+
+    GetItemsForCollection(collectionId: number, itemIds: number[] = []) {
+        // if the list of items is null
+        let request: server.GetItemsRequest = {
+            RequestTime: new Date(),
+            // no point in requesting an item that has a temp id
+            ItemIds: ko.utils.arrayFilter(itemIds, (item: number) => { return item > 0; })
+        };
+
+        Utils.Post("GetItems", this.isGettingItems, request, (response: server.GetItemsResponse) => {
+            if (Utils.NotNull(response.Items)) {
+                let collection: CollectionVM = this.GetCollectionById(collectionId);
+                // now add all of them back
+                // TODO: splicing back in the same place to give a better user experience
+                let items = collection.exampleItems();
+
+                // so for each item fetched, look for it in the list of existing items
+                ko.utils.arrayForEach(response.Items, (i: server.ItemDTO) => {
+                    let itemVM: ItemVM = ko.utils.arrayFirst(items, (item: ItemVM) => {
+                        return item.exampleItemId === i.ExampleItemId;
+                    });
+
+                    let updatedItem: ItemVM = new ItemVM(i, collection);
+                    // if we found it, then splice it in to replace the old version
+                    if (Utils.NotNull(itemVM)) {
+                        let index: number = ko.utils.arrayIndexOf(items, itemVM);
+                        items.splice(index, 1, updatedItem);
+                    }
+                    // we don't have it in the list, which means it is new so just add it
+                    else {
+                        items.push(updatedItem);
+                    }
+                });
+
+                collection.exampleItems(items);
+                // now update the modified value
+                collection.CheckIfModified();
+
+                // do logic to only replace the displayed collection if the item modified was in that collection
+                if (Utils.NotNull(this.selectedCollection()) && this.selectedCollection().exampleCollectionId == collectionId) {
+                    this.selectedCollection(this.GetCollectionById(this.selectedCollection().exampleCollectionId));
+                }
+            }
+        });
     }
 
     // Save changes to all collections and all DTOs that have changed, optionally just save the collections of the ids passed in.
+    // save collections also saves the items
     SaveCollections(collectionIds: number[] = []) {
         let filtered: CollectionVM[] = [];
 
+        // first find each of the collections that were requested to be saved and put them in a list
         filtered = ko.utils.arrayFilter(this.collections(), (item: CollectionVM) => {
             let result: boolean = false;
+            // so if the collection ids aren't null, look 
             if (Utils.NotNull(collectionIds)) {
                 let exists = ko.utils.arrayFirst(collectionIds, (collectionId: number) => {
                     return collectionId === item.exampleCollectionId;
                 });
                 result = Utils.NotNull(exists);
             }
+            // if they are null, then just... save all collections which are modified
             else {
                 result = item.isModified() || item.isCreate() || item.isDelete();
             }
             return result;
         });
 
-        let collections = ko.utils.arrayMap(filtered, (collectionVM: CollectionVM) => {
-            let collectionDTO = collectionVM.AsDto();
-            collectionDTO.UpdateType = collectionVM.GetUpdateType();
-            return collectionDTO;
+        // map the collections to be saved into DTOs, this includes any changes to items
+        let collectionDTOs: server.CollectionDTO[] = ko.utils.arrayMap(filtered, (collectionVM: CollectionVM) => {
+            return collectionVM.AsDto();
         });
 
         let request: server.UpdateCollectionsRequest = {
-            Collections: collections
+            RequestTime: new Date(),
+            Collections: collectionDTOs
         };
 
-        ko.utils.arrayForEach(collections, (item: server.CollectionDTO) => {
-            if (Utils.NotNull(this.selectedCollection()) && (item.UpdateType === server.UpdateType.isDelete) && (item.ExampleCollectionId === this.selectedCollection().exampleCollectionId)) {
-                this.selectedCollection(null);
-            }
-        });
-
         Utils.Post("UpdateCollections", this.isSavingCollections, request, (response: server.UpdateCollectionsResponse) => {
-            console.log("UpdateCollections: " + response.UpdatedCollectionIds);
+            // so now we updated the collections, look for any that were created new or removed
             if (Utils.NotNull(response.UpdatedCollectionIds)) {
-                this.GetCollections(response.UpdatedCollectionIds, true);
+                let collections: CollectionVM[] = this.collections();
+                let collectionIds: number[] = [];
+                // so we finished the update, look for each collection that was added and collection and change its id to reflect the new value
+                ko.utils.arrayForEach(response.UpdatedCollectionIds, (updatedCollection: server.UpdatedCollection) => {
+                    // find the original collection
+                    let collectionVM: CollectionVM = ko.utils.arrayFirst(collections, (collection: CollectionVM) => {
+                        return collection.exampleCollectionId === updatedCollection.OrigionalId;
+                    });
+
+                    if (Utils.IsNull(updatedCollection.NewId)) {
+                        ko.utils.arrayRemoveItem(collections, collectionVM);
+                    } else {
+                        // if the original value is 0 or less then we were adding a new collection
+                        collectionIds.push(updatedCollection.NewId);
+                        if (updatedCollection.OrigionalId <= 0) {
+                            if (Utils.NotNull(collectionVM)) {
+                                collectionVM.exampleCollectionId = updatedCollection.NewId;
+                            }
+                        }
+                    }
+                    // if the updated value is null, we removed it
+                });
+                this.collections(collections);
+
+                this.GetCollections(collectionIds, true);
             }
         });
     }
 
     AddNewCollection() {
-        let newCollection: CollectionVM = new CollectionVM();
-        newCollection.name("New Collection");
-        newCollection.isCreate(true);
         let collectionIds: number[] = ko.utils.arrayMap(this.collections(), (item: CollectionVM) => { return item.exampleCollectionId; });
         let minCollectionId: number = Math.min(...collectionIds) - 1;
         if (minCollectionId > 0) {
             minCollectionId = 0;
         }
-        newCollection.exampleCollectionId = minCollectionId;
+
+        let newCollectionDTO: server.CollectionDTO = {
+            Name: "New Collection",
+            ExampleCollectionId: minCollectionId,
+            ItemDTOs: [],
+            UpdateType: server.UpdateType.isCreate
+        };
+        let newCollection: CollectionVM = new CollectionVM(newCollectionDTO);
+
         this.collections.push(newCollection);
     }
 
-    deleteAllToggle: KnockoutObservable<boolean> = ko.observable(false);
+    deleteAllCollectionsToggle: KnockoutObservable<boolean> = ko.observable(false);
     DeleteAll(): void {
-        this.deleteAllToggle(!this.deleteAllToggle());
+        this.deleteAllCollectionsToggle(!this.deleteAllCollectionsToggle());
         let collections: CollectionVM[] = this.collections();
         this.DeleteCollections(ko.utils.arrayMap(collections, (item: CollectionVM) => {
             return item.exampleCollectionId;
@@ -570,7 +634,7 @@ class IndexViewModel {
                 ko.utils.arrayRemoveItem(collections, collection);
             } else {
                 if (useToggle) {
-                    collection.isDelete(this.deleteAllToggle());
+                    collection.isDelete(this.deleteAllCollectionsToggle());
                 } else {
                     collection.isDelete(!collection.isDelete());
                 }
@@ -596,22 +660,39 @@ class IndexViewModel {
                     } else {
                         item.isDelete(!item.isDelete());
                     }
-                    item.isDelete(!item.isDelete());
                 }
             }
         });
         collection.exampleItems(items);
+
     }
 
-    ResetAll(): void {
-        ko.utils.arrayForEach(this.collections(), (item: CollectionVM) => {
-            item.Reset();
+    ResetAll() {
+        let collections: CollectionVM[] = this.collections();
+        ko.utils.arrayForEach(collections, (collection: CollectionVM) => {
+            if (Utils.NotNull(collection)) {
+                collection.Reset();
+            }
         });
+        this.collections(collections);
     }
 
-    ResetCollection(collectionId: number) {
-        let collection = this.GetCollectionById(collectionId);
+    ResetSelectedCollection() {
+        let collection = this.selectedCollection();
+        let items = collection.exampleItems();
+        if (Utils.NotNull(items)) {
+            ko.utils.arrayForEach(collection.exampleItems(), (exampleItem: ItemVM) => {
+                if (Utils.NotNull(exampleItem)) {
+                    exampleItem.Reset();
+                }
+            });
+            collection.exampleItems(items);
+        }
+
         collection.Reset();
+        collection.CheckIfModified();
+        this.selectedCollection(collection);
+        this.CheckIfModified();
     }
 
     ResetItem(collectionId: number, itemId: number) {
@@ -626,24 +707,24 @@ class IndexViewModel {
     }
 
     AddNewItem() {
-
         let itemIds: number[] = ko.utils.arrayMap(this.selectedCollection().exampleItems(), (item: ItemVM) => { return item.exampleItemId; });
         let minItemId: number = Math.min(...itemIds) - 1;
         if (minItemId > 0) {
             minItemId = 0;
         }
-
+        
         let newItem = new ItemVM(null, this.selectedCollection());
-
         newItem.exampleItemId = minItemId;
         newItem.itemString("New Item");
         newItem.itemInt(0);
-        newItem.itemBool(false);
+        newItem.itemBool( false);
+        newItem.exampleCollectionId = this.selectedCollection().exampleCollectionId;
+        newItem.isCreate(true);
 
         let items: ItemVM[] = this.selectedCollection().exampleItems();
         items.push(newItem);
         this.selectedCollection().exampleItems(items);
-        this.selectedCollection().CheckIfModified();
+        this.selectedCollection().isModified(true);
     }
 
     isModified: KnockoutObservable<boolean> = ko.observable();
@@ -660,7 +741,13 @@ class IndexViewModel {
     constructor() {
         this.GetCollections();
 
-        this.collections.subscribe((newValue: CollectionVM[]) => { this.CheckIfModified() });
-        this.selectedCollection.subscribe((newValue: CollectionVM) => { this.deleteAllItemsToggle(true);});
+        this.collections.subscribe((newValue: CollectionVM[]) => {
+            this.CheckIfModified();
+            // update the selected collection
+            if (Utils.NotNull(this.selectedCollection())) {
+                this.selectedCollection(this.GetCollectionById(this.selectedCollection().exampleCollectionId));
+            }
+        });
+        this.selectedCollection.subscribe((newValue: CollectionVM) => { this.deleteAllItemsToggle(true); });
     }
 }
